@@ -76,7 +76,7 @@ func (w *worker) run() {
 
 			// Got a batch of urls to crawl, loop and check at each iteration if a stop
 			// is received.
-			for _, ctx := range batch {
+			for index, ctx := range batch {
 				w.logFunc(LogInfo, "popped: %s", ctx.url)
 
 				if ctx.IsRobotsURL() {
@@ -94,6 +94,15 @@ func (w *worker) run() {
 				select {
 				case <-w.stop:
 					w.logFunc(LogInfo, "stop signal received.")
+					// enqueue url for upload
+					for i := index; i < len(batch); i++ {
+						// break if buffer full
+						if len(w.enqueue) == w.opts.EnqueueChanBuffer {
+							break
+						}
+
+						w.enqueue <- batch[i]
+					}
 					return
 				default:
 					// Nothing, just continue...
@@ -304,6 +313,14 @@ func (w *worker) sendResponse(ctx *URLContext, visited bool, harvested interface
 		select {
 		case <-w.stop:
 			w.logFunc(LogInfo, "ignoring send response, will stop.")
+			// enqueue url for upload
+			go func() {
+				if len(w.enqueue) == w.opts.EnqueueChanBuffer {
+					return
+				}
+
+				w.enqueue <- ctx
+			}()
 			return
 		default:
 			// Nothing, just continue...

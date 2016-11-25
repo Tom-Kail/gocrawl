@@ -138,7 +138,8 @@ func (c *Crawler) setExtenderEnqueueChan() {
 		return
 	}
 	t := ec.Type()
-	if t.Kind() != reflect.Chan || t.ChanDir() != reflect.SendDir {
+	//	if t.Kind() != reflect.Chan || t.ChanDir() != reflect.SendDir {
+	if t.Kind() != reflect.Chan {
 		c.logFunc(LogInfo, "extender.EnqueueChan is not of type chan<-interface{}, cannot set the enqueue channel")
 		return
 	}
@@ -147,6 +148,7 @@ func (c *Crawler) setExtenderEnqueueChan() {
 		c.logFunc(LogInfo, "extender.EnqueueChan is not of type chan<-interface{}, cannot set the enqueue channel")
 		return
 	}
+	c.logFunc(LogInfo, "set extender.EnqueueChan success")
 	src := reflect.ValueOf(c.enqueue)
 	ec.Set(src)
 }
@@ -305,6 +307,14 @@ func (c *Crawler) collectUrls() error {
 					// Limit reached, request workers to stop
 					c.logFunc(LogInfo, "sending STOP signals...")
 					close(c.stop)
+					//enqueue url for upload
+					go func() {
+						if len(c.enqueue) == c.Options.EnqueueChanBuffer {
+							return
+						}
+
+						c.enqueue <- res.ctx
+					}()
 					return ErrMaxVisits
 				}
 			}

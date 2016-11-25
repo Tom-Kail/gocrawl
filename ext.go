@@ -81,7 +81,7 @@ var HttpClient = &http.Client{CheckRedirect: func(req *http.Request, via []*http
 // possible to nest such a value in a custom struct so that only the
 // Extender methods that require custom behaviour have to be implemented.
 type DefaultExtender struct {
-	EnqueueChan chan<- interface{}
+	EnqueueChan chan interface{}
 }
 
 // Start returns the same seeds as those received (those that were passed

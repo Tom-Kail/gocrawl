@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/PuerkitoBio/gocrawl"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/Tom-Kail/gocrawl"
 )
 
 // Only enqueue the root and paths beginning with an "a"
