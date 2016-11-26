@@ -2,6 +2,7 @@
 package gocrawl
 
 import (
+	"math/rand"
 	"reflect"
 	"strings"
 	"sync"
@@ -34,7 +35,7 @@ type Crawler struct {
 	// is of no use, but this is the smallest type possible - it uses no memory at all.
 	visited map[string]struct{}
 	hosts   map[string]struct{}
-	workers map[string]*worker
+	workers []*worker
 }
 
 // NewCrawlerWithOptions returns a Crawler initialized with the
@@ -101,13 +102,10 @@ func (c *Crawler) init(ctxs []*URLContext) {
 	// Create the workers map and the push channel (the channel used by workers
 	// to communicate back to the crawler)
 	c.stop = make(chan struct{})
-	if c.Options.SameHostOnly {
-		c.workers, c.push = make(map[string]*worker, hostCount),
-			make(chan *workerResponse, hostCount)
-	} else {
-		c.workers, c.push = make(map[string]*worker, c.Options.HostBufferFactor*hostCount),
-			make(chan *workerResponse, c.Options.HostBufferFactor*hostCount)
-	}
+
+	// init worker pool
+	c.workers, c.push = make([]*worker, 0),
+		make(chan *workerResponse, c.Options.WokerPoolSize)
 	// Create and pass the enqueue channel
 	c.enqueue = make(chan interface{}, c.Options.EnqueueChanBuffer)
 	c.setExtenderEnqueueChan()
@@ -178,7 +176,8 @@ func (c *Crawler) launchWorker(ctx *URLContext) *worker {
 	// Launch worker
 	go w.run()
 	c.logFunc(LogInfo, "worker %d launched for host %s", i, w.host)
-	c.workers[w.host] = w
+	//	c.workers[w.host] = w
+	c.workers = append(c.workers, w)
 
 	return w
 }
@@ -241,8 +240,15 @@ func (c *Crawler) enqueueUrls(ctxs []*URLContext) (cnt int) {
 			// flag. So this is an acceptable behaviour for gocrawl.
 
 			// Launch worker if required, based on the host of the normalized URL
-			w, ok := c.workers[ctx.normalizedURL.Host]
-			if !ok {
+
+			//			println("***********************")
+			//			println("len(worker):", len(c.workers))
+			//			println("***********************")
+			var w *worker
+			if len(c.workers) == int(c.Options.WokerPoolSize) {
+				randIndex := rand.Intn(c.Options.WokerPoolSize - 1)
+				w = c.workers[randIndex]
+			} else {
 				// No worker exists for this host, launch a new one
 				w = c.launchWorker(ctx)
 				// Automatically enqueue the robots.txt URL as first in line
@@ -255,7 +261,6 @@ func (c *Crawler) enqueueUrls(ctxs []*URLContext) (cnt int) {
 					w.pop.stack(robCtx)
 				}
 			}
-
 			cnt++
 			c.logFunc(LogEnqueued, "enqueue: %s", ctx.url)
 			c.Options.Extender.Enqueued(ctx)
@@ -320,8 +325,8 @@ func (c *Crawler) collectUrls() error {
 			}
 			if res.idleDeath {
 				// The worker timed out from its Idle TTL delay, remove from active workers
-				delete(c.workers, res.host)
-				c.logFunc(LogInfo, "worker for host %s cleared on idle policy", res.host)
+				//delete(c.workers, res.host)
+				//c.logFunc(LogInfo, "worker for host %s cleared on idle policy", res.host)
 			} else {
 				c.enqueueUrls(c.toURLContexts(res.harvestedURLs, res.ctx.url))
 				c.pushPopRefCount--

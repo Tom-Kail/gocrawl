@@ -1,5 +1,6 @@
 *.sublime-*
 .DS_Store
+.exe
 gocrawl.test
 #*.*#
 *.swp

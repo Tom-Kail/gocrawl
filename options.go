@@ -15,6 +15,7 @@ const (
 	DefaultCrawlDelay         time.Duration             = 5 * time.Second
 	DefaultIdleTTL            time.Duration             = 10 * time.Second
 	DefaultNormalizationFlags purell.NormalizationFlags = purell.FlagsAllGreedy
+	DefaultWokerPoolSize      int                       = 80
 )
 
 // Options contains the configuration for a Crawler to customize the
@@ -75,6 +76,9 @@ type Options struct {
 
 	// Extender is the implementation of hooks to use by the crawler.
 	Extender Extender
+
+	// WokerPoolSize is the max number of woker run at sametime
+	WokerPoolSize int
 }
 
 // NewOptions creates a new set of Options with default values
@@ -96,5 +100,6 @@ func NewOptions(ext Extender) *Options {
 		DefaultNormalizationFlags,
 		LogError,
 		ext,
+		DefaultWokerPoolSize,
 	}
 }
