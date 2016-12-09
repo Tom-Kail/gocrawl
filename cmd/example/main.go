@@ -49,7 +49,7 @@ func (e *Ext) End(err error) {
 func main() {
 
 	//	x := make(chan interface{}, 1000)
-
+	now := time.Now()
 	ext := &Ext{&gocrawl.DefaultExtender{}}
 
 	// Set custom options
@@ -57,11 +57,13 @@ func main() {
 	opts.CrawlDelay = 10 * time.Millisecond
 	opts.LogFlags = gocrawl.LogError
 	opts.EnqueueChanBuffer = 1000
+	opts.WokerPoolSize = 3000
 	opts.SameHostOnly = true
-	opts.MaxVisits = 1000
+	opts.MaxVisits = 10000
 
 	c := gocrawl.NewCrawlerWithOptions(opts)
-	//	err := c.Run("http://www.gov.cn")
-	err := c.Run("http://192.168.133.134")
+	err := c.Run("http://www.gov.cn")
+	//	err := c.Run("http://192.168.133.134")
 	fmt.Println(err)
+	fmt.Println(time.Since(now))
 }

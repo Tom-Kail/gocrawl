@@ -129,6 +129,20 @@ func (w *worker) isAllowedPerRobotsPolicies(u *url.URL) bool {
 
 // Process the specified URL.
 func (w *worker) requestURL(ctx *URLContext, headRequest bool) {
+	// static
+	if ctx.Dynamic == true {
+		var harvested interface{}
+		var visited bool
+		res := http.Get(ctx.URL().String())
+		res := http.Response{}
+
+		harvested = w.visitURL(ctx, res)
+		visited = true
+
+		w.sendResponse(ctx, visited, harvested, false)
+		return
+	}
+
 	if res, ok := w.fetchURL(ctx, w.opts.UserAgent, headRequest); ok {
 		var harvested interface{}
 		var visited bool
@@ -148,6 +162,7 @@ func (w *worker) requestURL(ctx *URLContext, headRequest bool) {
 		}
 		w.sendResponse(ctx, visited, harvested, false)
 	}
+
 }
 
 // Process the robots.txt URL.
