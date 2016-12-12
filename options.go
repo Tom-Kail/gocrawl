@@ -18,6 +18,8 @@ const (
 	DefaultWokerPoolSize      int                       = 80
 )
 
+var GlobalDynamicURL = make(map[string]struct{}, 3)
+
 // Options contains the configuration for a Crawler to customize the
 // crawling process.
 type Options struct {
@@ -79,6 +81,9 @@ type Options struct {
 
 	// WokerPoolSize is the max number of woker run at sametime
 	WokerPoolSize int
+
+	//DynamicURL stores hosts which contain dynamic pages
+	DynamicURL map[string]struct{}
 }
 
 // NewOptions creates a new set of Options with default values
@@ -101,5 +106,6 @@ func NewOptions(ext Extender) *Options {
 		LogError,
 		ext,
 		DefaultWokerPoolSize,
+		GlobalDynamicURL,
 	}
 }

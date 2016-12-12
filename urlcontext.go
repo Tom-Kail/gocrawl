@@ -30,7 +30,6 @@ type URLContext struct {
 	normalizedURL       *url.URL
 	sourceURL           *url.URL
 	normalizedSourceURL *url.URL
-	Dynamic             bool
 }
 
 // URL returns the URL.

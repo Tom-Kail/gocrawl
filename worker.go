@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -129,16 +130,37 @@ func (w *worker) isAllowedPerRobotsPolicies(u *url.URL) bool {
 
 // Process the specified URL.
 func (w *worker) requestURL(ctx *URLContext, headRequest bool) {
-	// static
-	if ctx.Dynamic == true {
+	if _, ok := GlobalDynamicURL[ctx.URL().Host]; ok {
 		var harvested interface{}
 		var visited bool
-		res := http.Get(ctx.URL().String())
-		res := http.Response{}
 
-		harvested = w.visitURL(ctx, res)
-		visited = true
+		output, err := exec.Command("../../thirdparty/plantomjs/phantomjs", "thirdparty/plantomjs/html.js", ctx.URL().String()).Output()
+		if err != nil {
+			w.opts.Extender.Error(newCrawlErrorMessage(ctx, err.Error(), CekHttpStatusCode))
+			w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, err.Error())
+			return
+		}
 
+		// Any 2xx status code is good to go
+		//	output = strings.TrimSpace(output)
+		// 先默认正常，后期添加错误处理
+		if len(output) != 0 {
+			// Success, visit the URL
+			doc, err := goquery.NewDocumentFromReader(bytes.NewReader(output))
+			if err != nil {
+				w.opts.Extender.Error(newCrawlErrorMessage(ctx, err.Error(), CekHttpStatusCode))
+				w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, err.Error())
+				return
+			}
+
+			doc.Url = ctx.URL()
+			harvested = w.visitDynamicURL(ctx, doc)
+			visited = true
+		} else {
+			// Error based on status code received
+			w.opts.Extender.Error(newCrawlErrorMessage(ctx, "500", CekHttpStatusCode))
+			w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, "500")
+		}
 		w.sendResponse(ctx, visited, harvested, false)
 		return
 	}
@@ -377,6 +399,25 @@ func (w *worker) visitURL(ctx *URLContext, res *http.Response) interface{} {
 
 	// Visit the document (with nil goquery doc if failed to load)
 	if harvested, doLinks = w.opts.Extender.Visit(ctx, res, doc); doLinks {
+		// Links were not processed by the visitor, so process links
+		if doc != nil {
+			harvested = w.processLinks(doc)
+		} else {
+			w.opts.Extender.Error(newCrawlErrorMessage(ctx, "No goquery document to process links.", CekProcessLinks))
+			w.logFunc(LogError, "ERROR processing links %s", ctx.url)
+		}
+	}
+	// Notify that this URL has been visited
+	w.opts.Extender.Visited(ctx, harvested)
+
+	return harvested
+}
+
+func (w *worker) visitDynamicURL(ctx *URLContext, doc *goquery.Document) interface{} {
+	// Visit the document (with nil goquery doc if failed to load)
+	var harvested interface{}
+	var doLinks bool
+	if harvested, doLinks = w.opts.Extender.Visit(ctx, nil, doc); doLinks {
 		// Links were not processed by the visitor, so process links
 		if doc != nil {
 			harvested = w.processLinks(doc)

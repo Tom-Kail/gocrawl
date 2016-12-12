@@ -64,6 +64,7 @@ func (c *Crawler) Run(seeds interface{}) error {
 	c.logFunc = getLogFunc(c.Options.Extender, c.Options.LogFlags, -1)
 
 	seeds = c.Options.Extender.Start(seeds)
+	GlobalDynamicURL = c.Options.DynamicURL
 	ctxs := c.toURLContexts(seeds, nil)
 	c.init(ctxs)
 

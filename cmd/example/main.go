@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -13,8 +14,11 @@ type Ext struct {
 	*gocrawl.DefaultExtender
 }
 
+var URLCount int64
+
 func (e *Ext) Visit(ctx *gocrawl.URLContext, res *http.Response, doc *goquery.Document) (interface{}, bool) {
 	fmt.Printf("Visit: %s\n", ctx.URL())
+	atomic.AddInt64(&URLCount, 1)
 	return nil, true
 }
 
@@ -57,13 +61,15 @@ func main() {
 	opts.CrawlDelay = 10 * time.Millisecond
 	opts.LogFlags = gocrawl.LogError
 	opts.EnqueueChanBuffer = 1000
-	opts.WokerPoolSize = 3000
+	opts.WokerPoolSize = 1
 	opts.SameHostOnly = true
 	opts.MaxVisits = 10000
-
+	opts.DynamicURL["www.hnkcsj.com"] = struct{}{}
 	c := gocrawl.NewCrawlerWithOptions(opts)
-	err := c.Run("http://www.gov.cn")
+	//	err := c.Run("http://www.gov.cn")
+	err := c.Run("http://www.hnkcsj.com/")
 	//	err := c.Run("http://192.168.133.134")
 	fmt.Println(err)
 	fmt.Println(time.Since(now))
+	fmt.Println("url_number:", URLCount)
 }
