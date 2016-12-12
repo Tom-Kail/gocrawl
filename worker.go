@@ -133,8 +133,18 @@ func (w *worker) requestURL(ctx *URLContext, headRequest bool) {
 	if _, ok := GlobalDynamicURL[ctx.URL().Host]; ok {
 		var harvested interface{}
 		var visited bool
+		//		dir, err := os.Getwd()
+		//		if err != nil {
+		//			w.opts.Extender.Error(newCrawlErrorMessage(ctx, err.Error(), CekHttpStatusCode))
+		//			w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, err.Error())
+		//			return
+		//		}
 
-		output, err := exec.Command("../../thirdparty/plantomjs/phantomjs", "thirdparty/plantomjs/html.js", ctx.URL().String()).Output()
+		//		pjPath := filepath.Join(dir, "thirdparty/phantomjs/phantomjs")
+		pjPath := "D:\\golang\\src\\govcrawler\\gocrawl\\thirdparty\\plantomjs\\phantomjs.exe"
+		//		jsPath := filepath.Join(dir, "thirdparty/phantomjs/html.js")
+		jsPath := "D:\\golang\\src\\govcrawler\\gocrawl\\thirdparty\\plantomjs\\html.js"
+		output, err := exec.Command(pjPath, "--load-images=false", "--debug=false", jsPath, ctx.URL().String()).Output()
 		if err != nil {
 			w.opts.Extender.Error(newCrawlErrorMessage(ctx, err.Error(), CekHttpStatusCode))
 			w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, err.Error())
@@ -146,7 +156,9 @@ func (w *worker) requestURL(ctx *URLContext, headRequest bool) {
 		// 先默认正常，后期添加错误处理
 		if len(output) != 0 {
 			// Success, visit the URL
-			doc, err := goquery.NewDocumentFromReader(bytes.NewReader(output))
+			htm := string(output)
+			//			htm = html.UnescapeString(htm)
+			doc, err := goquery.NewDocumentFromReader(strings.NewReader(htm))
 			if err != nil {
 				w.opts.Extender.Error(newCrawlErrorMessage(ctx, err.Error(), CekHttpStatusCode))
 				w.logFunc(LogError, "ERROR status code for %s: %s", ctx.url, err.Error())
@@ -421,6 +433,7 @@ func (w *worker) visitDynamicURL(ctx *URLContext, doc *goquery.Document) interfa
 		// Links were not processed by the visitor, so process links
 		if doc != nil {
 			harvested = w.processLinks(doc)
+			//			fmt.Println(harvested)
 		} else {
 			w.opts.Extender.Error(newCrawlErrorMessage(ctx, "No goquery document to process links.", CekProcessLinks))
 			w.logFunc(LogError, "ERROR processing links %s", ctx.url)

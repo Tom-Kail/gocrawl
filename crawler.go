@@ -246,9 +246,13 @@ func (c *Crawler) enqueueUrls(ctxs []*URLContext) (cnt int) {
 			//			println("len(worker):", len(c.workers))
 			//			println("***********************")
 			var w *worker
-			if len(c.workers) == int(c.Options.WokerPoolSize) {
-				randIndex := rand.Intn(c.Options.WokerPoolSize - 1)
-				w = c.workers[randIndex]
+			if len(c.workers) == c.Options.WokerPoolSize {
+				if c.Options.WokerPoolSize == 1 {
+					w = c.workers[0]
+				} else {
+					randIndex := rand.Intn(c.Options.WokerPoolSize - 1)
+					w = c.workers[randIndex]
+				}
 			} else {
 				// No worker exists for this host, launch a new one
 				w = c.launchWorker(ctx)

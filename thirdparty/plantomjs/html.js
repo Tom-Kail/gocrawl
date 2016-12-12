@@ -10,8 +10,11 @@ page.open(url, function (status) {
     //Page is loaded!   
     if (status !== 'success') {   
         console.log('Unable to post!');   
+		phantom.exit();
     } else {   
-        console.log(page.content);   
-    }      
-    phantom.exit();   
-});
+		window.setTimeout(function () {
+			console.log(page.content); 	
+			phantom.exit();
+        }, 1000); // Change timeout as required to allow sufficient time 
+    }      	
+});    
